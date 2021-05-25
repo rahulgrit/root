@@ -286,7 +286,7 @@ public:
   int countSamples(std::vector<RooArgList *> &vertices);
   int countSamples(int nprod, int ndec, int nboth);
 
-  TPair *makeCrosssectionContainer(double xs, double unc);
+  static TPair *makeCrosssectionContainer(double xs, double unc);
   std::map<std::string, std::string>
   createWeightStrings(const ParamMap &inputs,
                       const std::vector<std::vector<std::string>> &vertices);
