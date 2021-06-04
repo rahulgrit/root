@@ -56,7 +56,7 @@ describe the same process or not.
 #include "TH1.h"
 #include "TMap.h"
 #include "TParameter.h"
-#include "TRandom3.h"
+#include "TRandom3.h" 
 // stl includes
 #include "ROOT/RMakeUnique.hxx"
 #include <algorithm>
@@ -1891,6 +1891,7 @@ void RooLagrangianMorphFunc::Config::readParameters(TDirectory *f) {
 /// retrieve the physics inputs
 
 void RooLagrangianMorphFunc::collectInputs(TDirectory *file) {
+  std::cout << this->_config.getObservableName() << std::endl;
   std::string obsName = this->_config.getObservableName();
   cxcoutP(InputArguments) << "initializing physics inputs from file "
                           << file->GetName() << " with object name(s) '"
@@ -1959,6 +1960,7 @@ void RooLagrangianMorphFunc::Config::addFolders(const RooArgList &folders) {
   closeFile(file);
 }
 
+
 ////////////////////////////////////////////////////////////////////////////////
 /// parameterised constructor
 RooLagrangianMorphFunc::Config::Config(const RooAbsCollection &couplings) {
@@ -1972,6 +1974,16 @@ RooLagrangianMorphFunc::Config::Config(const RooAbsCollection &prodCouplings,
   extractCouplings(prodCouplings, this->_prodCouplings);
   extractCouplings(decCouplings, this->_decCouplings);
 }
+
+////////////////////////////////////////////////////////////////////////////////
+/// parameterised constructor
+RooLagrangianMorphFunc::Config::Config(const Config &other) {
+  extractCouplings(other.getProdCouplings(), this->_prodCouplings);
+  extractCouplings(other.getDecCouplings(), this->_decCouplings);
+}
+
+RooLagrangianMorphFunc::Config::~Config() {}
+
 
 ////////////////////////////////////////////////////////////////////////////////
 /// config setter for couplings
@@ -2133,7 +2145,7 @@ void RooLagrangianMorphFunc::printPhysics() const {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-/// protected constructor with proper arguments
+/// constructor with proper arguments
 
 RooLagrangianMorphFunc::RooLagrangianMorphFunc(const char *name,
                                                const char *title,
@@ -2143,7 +2155,47 @@ RooLagrangianMorphFunc::RooLagrangianMorphFunc(const char *name,
       _observables("observables", "morphing observables", this, kTRUE, kFALSE),
       _binWidths("binWidths", "set of binWidth objects", this, kTRUE, kFALSE),
       _config(config), _curNormSet(0) {
-  this->_config.addFolders(_config.getFolders());
+  this->init();
+  this->setup(false);
+
+  TRACE_CREATE
+}
+
+////////////////////////////////////////////////////////////////////////////////
+/// constructor with proper arguments
+
+RooLagrangianMorphFunc::RooLagrangianMorphFunc(const char *name,
+                                               const char *title,
+                                               const Config1 &config)
+    : RooAbsReal(name, title), _cacheMgr(this, 10, kTRUE, kTRUE),
+      _operators("operators", "set of operators", this, kTRUE, kFALSE),
+      _observables("observables", "morphing observables", this, kTRUE, kFALSE),
+      _binWidths("binWidths", "set of binWidth objects", this, kTRUE, kFALSE),
+      _config1(config), _curNormSet(0) {
+//  this->_config.addFolders(_config.getFolders());
+  this->init();
+  this->setup(false);
+
+  TRACE_CREATE
+}
+
+////////////////////////////////////////////////////////////////////////////////
+/// constructor with proper arguments
+
+RooLagrangianMorphFunc::RooLagrangianMorphFunc(const char *name,
+                                               const char *title,
+                                               const char* inputFile, 
+                                               const char* observableName,
+                                               const RooArgList &folders,
+                                               const RooArgList &couplings)
+      : RooAbsReal(name, title), _cacheMgr(this, 10, kTRUE, kTRUE),
+      _operators("operators", "set of operators", this, kTRUE, kFALSE),
+      _observables("observables", "morphing observables", this, kTRUE, kFALSE),
+      _binWidths("binWidths", "set of binWidth objects", this, kTRUE, kFALSE),
+      _config(RooLagrangianMorphFunc::Config(couplings)), _curNormSet(0) {
+  this->_config.setObservableName(observableName);
+  this->_config.setFileName(inputFile);
+  this->_config.addFolders(folders);
   this->init();
   this->setup(false);
 
@@ -2347,25 +2399,6 @@ RooLagrangianMorphFunc::~RooLagrangianMorphFunc(){TRACE_DESTROY}
 
 TObject *RooLagrangianMorphFunc::clone(const char *newname) const {
   return new RooLagrangianMorphFunc(*this, newname);
-}
-
-////////////////////////////////////////////////////////////////////////////////
-/// print the authors information
-
-void RooLagrangianMorphFunc::printAuthors() const {
-  std::cout << "\033[1mRooLagrangianMorphFunc\033[0m: a RooFit class for "
-               "morphing physics distributions between configurations. authors:"
-            << std::endl;
-  std::cout << "   "
-            << "Lydia Brenner   (lbrenner@cern.ch)" << std::endl;
-  std::cout << "   "
-            << "Carsten Burgard (cburgard@cern.ch)" << std::endl;
-  std::cout << "   "
-            << "Katharina Ecker (kecker@cern.ch)" << std::endl;
-  std::cout << "   "
-            << "Adam Kaluza     (akaluza@cern.ch)" << std::endl;
-  std::cout << "please feel free to contact with questions and suggestions."
-            << std::endl;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
