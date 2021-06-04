@@ -84,99 +84,27 @@ public:
   typedef std::map<const std::string, ParamSet> ParamMap;
   typedef std::map<const std::string, FlagSet> FlagMap;
 
-  struct Config1 {
+  struct Config {
 
     std::string observableName;
     std::string fileName;
+    ParamMap paramCards;
+    FlagMap flagValues;
     std::vector<std::string> folderNames;
     RooArgList couplings;
+    RooArgList decCouplings;
+    RooArgList prodCouplings;
+    RooArgList folders;
     std::vector<RooArgList *> vertices;
     std::vector<RooArgList *> nonInterfering;
     bool allowNegativeYields=true;
    
   };
-  class Config {
-  public:
-    Config() {}
-    virtual ~Config();
-    Config(const RooAbsCollection &couplings);
-    Config(const RooAbsCollection &prodCouplings,
-           const RooAbsCollection &decCouplings);
-    Config(const Config &other);
-      
-    void setFileName(const char *filename);
-    void setFolders(const RooArgList &folderlist);
-    void setObservableName(const char *obsname);
-    void setCouplings(const RooAbsCollection &couplings);
-    void setCouplings(const RooAbsCollection &prodCouplings,
-                      const RooAbsCollection &decCouplings);
-    void allowNegativeYields(Bool_t allowNegativeYields);
-    template <class T> void setVertices(const std::vector<T> &vertices);
-    template <class T>
-    void setDiagrams(const std::vector<std::vector<T>> &diagrams);
-    template <class T>
-    void setNonInterfering(const std::vector<T *> &nonInterfering);
-    template <class T> void addDiagrams(const std::vector<T> &diagrams);
 
-    std::string const& getFileName() const { return _fileName; }
-    std::string const& getObservableName() const { return _obsName; }
-    std::vector<std::vector<RooArgList *>> const& getDiagrams() const { return _configDiagrams; }
-    RooArgList const& getCouplings() const { return _couplings; }
-    RooArgList const& getProdCouplings() const { return _prodCouplings; }
-    RooArgList const& getDecCouplings() const { return _decCouplings; }
-    RooArgList const& getFolders() const { return _folderlist; }
-    bool IsAllowNegativeYields() const { return _allowNegativeYields; }
-
-    void append(ParamSet &set, const char *str, double val);
-    //void append(ParamMap &map, const char *str, ParamSet &set);
-
-    /* WIP
-    void disableInterference(const std::vector<const char*>& nonInterfering) ;
-    void disableInterferences(const std::vector<std::vector<const char*> >&
-    nonInterfering) ;
-    */
-
-    RooRealVar *getParameter(const char *name) const;
-    bool hasParameter(const char *name) const;
-
-    void addFolders(const RooArgList &folders);
-
-    ParamMap const& getParamCards() const { return _paramCards; };
-    FlagMap const& getFlagValues() const { return _flagValues; };
-
-    std::vector<std::string> const& getFolderNames() const { return _folderNames; };
-    void printSamples() const;
-    void printPhysics() const;
-    /// Return the number of samples in this morphing function.
-    int nSamples() const { return _folderNames.size(); }
-
-    void readParameters(TDirectory *f);
-
-  private:
-    std::string _obsName;
-    std::string _fileName;
-    RooArgList _folderlist;
-    std::vector<std::string> _folderNames;
-    ParamMap _paramCards;
-    FlagMap _flagValues;
-    std::vector<RooArgList *> _vertices;
-    RooArgList _couplings;
-    RooArgList _prodCouplings;
-    RooArgList _decCouplings;
-    RooArgList _observables;
-    RooArgList _binWidths;
-    std::vector<std::vector<RooArgList *>> _configDiagrams;
-    std::vector<RooArgList *> _nonInterfering;
-    Bool_t _allowNegativeYields = true;
-   
-  };
-
+  void readParameters(TDirectory *f);
   RooLagrangianMorphFunc();
   RooLagrangianMorphFunc(const char *name, const char *title,
                          const Config &config);
-  RooLagrangianMorphFunc(const char *name, const char *title,
-                         const Config1 &config);
-
   RooLagrangianMorphFunc(const char *name, const char *title,
                          const char* inputFile, 
                          const char* observableName,
@@ -345,18 +273,17 @@ public:
   void setScale(double val);
   double getScale();
 
-  int nSamples() const {return _config.getFolderNames().size(); }
+  int nSamples() const {return _config.folderNames.size(); }
 
   RooRealSumFunc *getFunc() const;
   std::unique_ptr<RooWrapperPdf> createPdf() const;
 
   RooAbsPdf::ExtendMode extendMode() const;
   Double_t expectedEvents(const RooArgSet *nset) const;
-  Double_t expectedEvents(const RooArgSet &nset) const;
   Double_t expectedEvents() const;
   Bool_t selfNormalized() const { return true; }
 
-  void readParameters(TDirectory *f) { _config.readParameters(f); }
+//  void readParameters(TDirectory *f) { _config.readParameters(f); }
   void collectInputs(TDirectory *f);
 
   static std::unique_ptr<RooRatio> makeRatio(const char *name,
@@ -372,7 +299,6 @@ protected:
   RooListProxy _binWidths;
   RooListProxy _flags;
   Config _config;
-  Config1 _config1;
   std::vector<std::vector<RooListProxy *>> _diagrams;
   mutable const RooArgSet *_curNormSet; //!
   std::vector<RooListProxy *> _nonInterfering;
