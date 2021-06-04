@@ -84,12 +84,26 @@ public:
   typedef std::map<const std::string, ParamSet> ParamMap;
   typedef std::map<const std::string, FlagSet> FlagMap;
 
+  struct Config1 {
+
+    std::string observableName;
+    std::string fileName;
+    std::vector<std::string> folderNames;
+    RooArgList couplings;
+    std::vector<RooArgList *> vertices;
+    std::vector<RooArgList *> nonInterfering;
+    bool allowNegativeYields=true;
+   
+  };
   class Config {
   public:
     Config() {}
+    virtual ~Config();
     Config(const RooAbsCollection &couplings);
     Config(const RooAbsCollection &prodCouplings,
            const RooAbsCollection &decCouplings);
+    Config(const Config &other);
+      
     void setFileName(const char *filename);
     void setFolders(const RooArgList &folderlist);
     void setObservableName(const char *obsname);
@@ -104,15 +118,14 @@ public:
     void setNonInterfering(const std::vector<T *> &nonInterfering);
     template <class T> void addDiagrams(const std::vector<T> &diagrams);
 
-    std::string const& getFileName() const { return this->_fileName; }
-    std::string const& getObservableName() const { return this->_obsName; }
-    std::vector<std::vector<RooArgList *>> const& getDiagrams() const { return this->_configDiagrams; }
-    RooArgList const& getCouplings() const { return this->_couplings; }
-    RooArgList const& getProdCouplings() const { return this->_prodCouplings; }
-    RooArgList const& getDecCouplings() const { return this->_decCouplings; }
-    RooArgList const& getFolders() const { return this->_folderlist; }
-    bool IsAllowNegativeYields() const { return this->_allowNegativeYields; }
-
+    std::string const& getFileName() const { return _fileName; }
+    std::string const& getObservableName() const { return _obsName; }
+    std::vector<std::vector<RooArgList *>> const& getDiagrams() const { return _configDiagrams; }
+    RooArgList const& getCouplings() const { return _couplings; }
+    RooArgList const& getProdCouplings() const { return _prodCouplings; }
+    RooArgList const& getDecCouplings() const { return _decCouplings; }
+    RooArgList const& getFolders() const { return _folderlist; }
+    bool IsAllowNegativeYields() const { return _allowNegativeYields; }
 
     void append(ParamSet &set, const char *str, double val);
     //void append(ParamMap &map, const char *str, ParamSet &set);
@@ -128,14 +141,14 @@ public:
 
     void addFolders(const RooArgList &folders);
 
-    ParamMap const& getParamCards() const { return this->_paramCards; };
-    FlagMap const& getFlagValues() const { return this->_flagValues; };
+    ParamMap const& getParamCards() const { return _paramCards; };
+    FlagMap const& getFlagValues() const { return _flagValues; };
 
     std::vector<std::string> const& getFolderNames() const { return _folderNames; };
     void printSamples() const;
     void printPhysics() const;
     /// Return the number of samples in this morphing function.
-    int nSamples() const { return this->_folderNames.size(); }
+    int nSamples() const { return _folderNames.size(); }
 
     void readParameters(TDirectory *f);
 
@@ -155,11 +168,20 @@ public:
     std::vector<std::vector<RooArgList *>> _configDiagrams;
     std::vector<RooArgList *> _nonInterfering;
     Bool_t _allowNegativeYields = true;
+   
   };
 
   RooLagrangianMorphFunc();
   RooLagrangianMorphFunc(const char *name, const char *title,
                          const Config &config);
+  RooLagrangianMorphFunc(const char *name, const char *title,
+                         const Config1 &config);
+
+  RooLagrangianMorphFunc(const char *name, const char *title,
+                         const char* inputFile, 
+                         const char* observableName,
+                         const RooArgList &folders,
+                         const RooArgList &couplings);  
   RooLagrangianMorphFunc(const RooLagrangianMorphFunc &other,
                          const char *newName);
 
@@ -222,7 +244,7 @@ public:
   ParamSet getCouplings() const;
 
   // virtual Bool_t IsAllowNegativeYields() const { return
-  // this->_config.IsAllowNegativeYields(); }
+  // _config.IsAllowNegativeYields(); }
   TMatrixD getMatrix() const;
   TMatrixD getInvertedMatrix() const;
   double getCondition() const;
@@ -323,7 +345,7 @@ public:
   void setScale(double val);
   double getScale();
 
-  int nSamples() const {return this->_config.getFolderNames().size(); }
+  int nSamples() const {return _config.getFolderNames().size(); }
 
   RooRealSumFunc *getFunc() const;
   std::unique_ptr<RooWrapperPdf> createPdf() const;
@@ -350,6 +372,7 @@ protected:
   RooListProxy _binWidths;
   RooListProxy _flags;
   Config _config;
+  Config1 _config1;
   std::vector<std::vector<RooListProxy *>> _diagrams;
   mutable const RooArgSet *_curNormSet; //!
   std::vector<RooListProxy *> _nonInterfering;
