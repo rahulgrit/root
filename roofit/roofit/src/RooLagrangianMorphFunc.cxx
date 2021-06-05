@@ -30,11 +30,9 @@ and decay vertices, and also whether the decay and production vertices
 describe the same process or not.
 **/
 
-// uncomment to force UBLAS multiprecision matrices
-//#define USE_UBLAS 1
-// #undef USE_UBLAS
-
 #include "Riostream.h"
+#include "RooLagrangianMorphFunc.h"
+#include "Floats.h"
 
 #include "RooAbsCollection.h"
 #include "RooArgList.h"
@@ -44,7 +42,6 @@ describe the same process or not.
 #include "RooDataHist.h"
 #include "RooFormulaVar.h"
 #include "RooHistFunc.h"
-#include "RooLagrangianMorphFunc.h"
 #include "RooLinearCombination.h"
 #include "RooParamHistFunc.h"
 #include "RooProduct.h"
@@ -142,22 +139,22 @@ inline void writeMatrixToFileT(const MatrixT &matrix, const char *fname) {
 }
 
 #ifdef USE_UBLAS
-
 // boost includes
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wshadow"
 #pragma GCC diagnostic ignored "-Wunused-local-typedefs"
 #include <boost/numeric/ublas/io.hpp>
 #include <boost/numeric/ublas/lu.hpp>
+#include <boost/numeric/ublas/vector.hpp>
 #include <boost/numeric/ublas/matrix.hpp>
 #include <boost/numeric/ublas/matrix_expression.hpp>
 #include <boost/numeric/ublas/symmetric.hpp> //inc diag
 #include <boost/numeric/ublas/triangular.hpp>
 #include <boost/operators.hpp>
-
 #pragma GCC diagnostic pop
 
-typedef boost::numeric::ublas::matrix<SuperFloat> Matrix;
+namespace boost_ublas = boost::numeric::ublas;
+typedef boost_ublas::matrix<SuperFloat> Matrix;
 
 ////////////////////////////////////////////////////////////////////////////////
 /// write a matrix
@@ -165,8 +162,8 @@ typedef boost::numeric::ublas::matrix<SuperFloat> Matrix;
 inline void printMatrix(const Matrix &mat) {
   for (size_t i = 0; i < mat.size1(); ++i) {
     for (size_t j = 0; j < mat.size2(); ++j) {
-      // std::cout << std::setprecision(SuperFloatPrecision::digits10) <<
-      // mat(i,j) << " ,\t";
+      std::cout << std::setprecision(SuperFloatPrecision::digits10) <<
+      mat(i,j) << " ,\t";
     }
     std::cout << std::endl;
   }
@@ -176,20 +173,20 @@ inline void printMatrix(const Matrix &mat) {
 /// retrieve the size of a square matrix
 
 template <> inline size_t size<Matrix>(const Matrix &matrix) {
-  return matrix.size();
+  return matrix.size1();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 /// create a new diagonal matrix of size n
 
 inline Matrix diagMatrix(size_t n) {
-  return boost::numeric::ublas::identity_matrix<SuperFloat>(n);
+  return boost_ublas::identity_matrix<SuperFloat>(n);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 /// convert a matrix into a TMatrixD
 
-inline TMatrixD makeRootMatrix(const Matrix &in) {
+inline TMatrixD makeTMatrix(const Matrix &in) {
   size_t n = size(in);
   TMatrixD mat(n, n);
   for (size_t i = 0; i < n; ++i) {
@@ -214,16 +211,16 @@ inline Matrix makeSuperMatrix(const TMatrixD &in) {
   return mat;
 }
 
-inline Matrix operator+=(const Matrix &rhs) { return add(rhs); }
-inline Matrix operator*(const Matrix &m, const Matrix &otherM) {
-  return prod(m, otherM);
-}
+//inline Matrix operator+=(const Matrix &rhs) { return add(rhs); }
+//inline Matrix operator*(const Matrix &m, const Matrix &otherM) {
+//  return prod(m, otherM);
+//}
 
 ////////////////////////////////////////////////////////////////////////////////
 /// calculate the inverse of a matrix, returning the condition
 
 inline SuperFloat invertMatrix(const Matrix &matrix, Matrix &inverse) {
-  boost::numeric::ublas::permutation_matrix<size_t> pm(size(matrix));
+  boost_ublas::permutation_matrix<size_t> pm(size(matrix));
   SuperFloat mnorm = norm_inf(matrix);
   Matrix lu(matrix);
   try {
@@ -231,11 +228,11 @@ inline SuperFloat invertMatrix(const Matrix &matrix, Matrix &inverse) {
     if (res != 0) {
       std::stringstream ss;
       ::writeMatrixToStreamT(matrix, ss);
-      cxcoutP(Eval) << ss.str << std::endl;
+      //cxcoutP(Eval) << ss.str << std::endl;
     }
     // backsubstitute to get the inverse
     lu_substitute(lu, pm, inverse);
-  } catch (boost::numeric::ublas::internal_logic &error) {
+  } catch (boost_ublas::internal_logic &error) {
     // coutE(Eval) << "boost::numberic::ublas error: matrix is not invertible!"
     // << std::endl;
   }
@@ -252,7 +249,7 @@ typedef TMatrixD Matrix;
 ////////////////////////////////////////////////////////////////////////////////
 /// convert a matrix into a TMatrixD
 
-inline TMatrixD makeRootMatrix(const Matrix &in) { return TMatrixD(in); }
+inline TMatrixD makeTMatrix(const Matrix &in) { return TMatrixD(in); }
 
 ////////////////////////////////////////////////////////////////////////////////
 /// convert a TMatrixD into a Matrix
@@ -512,14 +509,14 @@ inline void closeFile(TDirectory * d) {
 ///////////////////////////////////////////////////////////////////////////////
 /// extract the operators from a single coupling
 template <class T2>
-inline void extractServers(const RooAbsArg &coupling, T2 &operators) {
+inline void extractServers(const RooAbsArg &inCoupling, T2 &destOperators) {
   int nservers = 0;
-  for (const auto server : coupling.servers()) {
-    extractServers(*server, operators);
+  for (const auto server : inCoupling.servers()) {
+    extractServers(*server, destOperators);
     nservers++;
   }
   if (nservers == 0) {
-    operators.add(coupling);
+    destOperators.add(inCoupling);
   }
 }
 
@@ -1075,13 +1072,13 @@ inline void checkMatrix(const RooLagrangianMorphFunc::ParamMap &inputParameters,
   }
 }
 
-////////////////////////////////////////////////////////////////////////////////
+/*////////////////////////////////////////////////////////////////////////////////
 /// check if the entries in the inverted matrix are sensible
 
 inline void inverseSanity(const Matrix &matrix, const Matrix &inverse,
                           double &unityDeviation, double &largestWeight) {
   // cxcoutP(Eval) << "multiplying for sanity check" << std::endl;
-  Matrix unity(inverse * matrix);
+  auto unity = boost_ublas::prod(inverse, matrix);
 
   unityDeviation = 0.;
   largestWeight = 0.;
@@ -1099,7 +1096,7 @@ inline void inverseSanity(const Matrix &matrix, const Matrix &inverse,
   // std::cout << "found deviation of " << unityDeviation << ", largest weight
   // is " << largestWeight << "." << std::endl;
 }
-
+*/
 ////////////////////////////////////////////////////////////////////////////////
 /// check for name conflicts between the input samples and an argument set
 template <class List>
@@ -1129,6 +1126,7 @@ buildFormulas(const char *mfname,
               const RooLagrangianMorphFunc::FlagMap &inputFlags,
               const MorphFuncPattern &morphfunc, const RooArgList &couplings,
               const List &flags, const std::vector<List *> &nonInterfering) {
+
   // example vbf hww:
   //                        Operators kSM,  kHww, kAww, kHdwR,kHzz, kAzz
   // std::vector<bool> vertexProd  = {true, true, true, true, true, true };
@@ -1165,12 +1163,10 @@ buildFormulas(const char *mfname,
     for (auto itr1 : couplings) {
       obj0 = dynamic_cast<RooAbsReal *>(itr1);
       if (obj0->getVal() != 0) {
-        // std::cout << obj0->GetName() << " is non-zero for sample " << sample
-        // << " (idx=" << idx << ")!" << std::endl;
+         std::cout << obj0->GetName() << " is non-zero for sample " << sample << " (idx=" << idx << ")!" << std::endl;
         couplingsZero[idx] = false;
       } else {
-        // std::cout << obj0->GetName() << " is zero for sample " << sample << "
-        // (idx=" << idx << ")!" << std::endl;
+         std::cout << obj0->GetName() << " is zero for sample " << sample << " (idx=" << idx << ")!" << std::endl;
       }
       idx++;
     }
@@ -1187,10 +1183,10 @@ buildFormulas(const char *mfname,
           nZero++;
         else
           nNonZero++;
-        // std::cout << "flag found " << obj1->GetName() << ", value = " <<
-        // flag->second << std::endl;
+          std::cout << "flag found " << obj1->GetName() << ", value = " <<
+          flag->second << std::endl;
       } else {
-        // std::cout << "flag not found " << obj1->GetName() << std::endl;
+         std::cout << "flag not found " << obj1->GetName() << std::endl;
       }
     }
     if (nZero > 0 && nNonZero == 0)
@@ -1294,8 +1290,7 @@ buildFormulas(const char *mfname,
                 << formulas[i]->GetTitle() << std::endl;
     } else {
       // print a message and continue without doing anything
-      // std::cout << "killing formula " << ::concatNames(ss," * ") << " because
-      // " << reason << std::endl;
+       std::cout << "killing formula " << ::concatNames(ss," * ") << " because " << reason << std::endl;
     }
   }
   return formulas;
@@ -1316,20 +1311,18 @@ createFormulas(const char *name, const RooLagrangianMorphFunc::ParamMap &inputs,
 
   for (const auto &vertices : diagrams) {
     FeynmanDiagram d;
-    // std::cout << "building vertex map" << std::endl;
+     std::cout << "building vertex map" << std::endl;
     ::fillFeynmanDiagram(d, vertices, couplings);
-    // std::cout << "collecting polynomials for diagram of size " << d.size() <<
-    // std::endl;
+     std::cout << "collecting polynomials for diagram of size " << d.size() << std::endl;
     ::collectPolynomials(morphfuncpattern, d);
   }
-  // coutD(ObjectHandling) << "building formulas" << std::endl;
+  std::cout << "building formulas" << std::endl;
   FormulaList retval = buildFormulas(name, inputs, inputFlags, morphfuncpattern,
                                      couplings, flags, nonInterfering);
   if (retval.size() == 0) {
-    // std::cout << "no formulas are non-zero, check if any if your couplings is
-    // floating and missing from your param_cards!" << std::endl;
+    std::cout << "no formulas are non-zero, check if any if your couplings is floating and missing from your param_cards!" << std::endl;
   }
-  // coutD(ObjectHandling) << "checking matrix consistency" << std::endl;
+  std::cout  << "checking matrix consistency" << std::endl;
   checkMatrix(inputs, retval);
   return retval;
 }
@@ -1358,7 +1351,7 @@ buildSampleWeights(T1 &weights, const char *fname,
     // build the formula with the correct normalization
     RooLinearCombination *sampleformula = new RooLinearCombination(name_full.Data());
     for (auto const &formulait : formulas) {
-      const SuperFloat val(inverse(formulaidx, sampleidx));
+      const SuperFloat val(inverse(formulaidx,sampleidx));
       sampleformula->add(val, formulait.second.get());
       formulaidx++;
     }
@@ -1477,7 +1470,7 @@ public:
     // coutD(Eval) << "Condition of the matrix :" << condition << std::endl;
 
     double unityDeviation, largestWeight;
-    inverseSanity(matrix, inverse, unityDeviation, largestWeight);
+    //inverseSanity(matrix, inverse, unityDeviation, largestWeight);
     bool weightwarning(largestWeight > morphLargestWeight ? true : false);
     bool unitywarning(unityDeviation > morphUnityDeviation ? true : false);
 
@@ -1855,11 +1848,11 @@ inline void RooLagrangianMorphFunc::updateSampleWeights() {
         << "updating formula for sample '" << sample << "'" << std::endl;
     for (size_t formulaidx = 0; formulaidx < n; ++formulaidx) {
       const SuperFloat val(cache->_inverse(formulaidx, sampleidx));
-#ifdef USE_UBLAS
+//ifdef USE_UBLAS
       if (val != val) {
-#else
-      if (std::isnan(val)) {
-#endif
+//#else
+//      if (std::isnan(val)) {
+//#endif
         coutE(ObjectHandling) << "refusing to propagate NaN!" << std::endl;
       }
       cxcoutP(ObjectHandling) << "   " << formulaidx << ":"
@@ -1883,6 +1876,7 @@ inline void RooLagrangianMorphFunc::updateSampleWeights() {
 /// read the parameters from the input file
 
 void RooLagrangianMorphFunc::readParameters(TDirectory *f) {
+  std::cout << "reading parameters" << std::endl; 
   readValues<double>(this->_config.paramCards, f, this->_config.folderNames, "param_card", true);
   readValues<int>(this->_config.flagValues, f, this->_config.folderNames, "flags", false);
 }
@@ -1994,6 +1988,8 @@ std::vector<std::vector<const char*> >& nonInterfering){
 /// print all the parameters and their values in the given sample to the console
 
 void RooLagrangianMorphFunc::printParameters(const char *samplename) const {
+  std::cout << "printing parameters" << std::endl;  
+//  std::cout << this->_config.paramCards << std::endl;
   for (const auto &param : this->_config.paramCards.at(samplename)) {
     if (this->hasParameter(param.first.c_str())) {
       std::cout << param.first << " = " << param.second;
@@ -2031,7 +2027,7 @@ void RooLagrangianMorphFunc::printPhysics() const {
 
 RooLagrangianMorphFunc::RooLagrangianMorphFunc(const char *name,
                                                const char *title,
-                                               const Config &config)
+                                               const Config config)
     : RooAbsReal(name, title), _cacheMgr(this, 10, kTRUE, kTRUE),
       _operators("operators", "set of operators", this, kTRUE, kFALSE),
       _observables("observables", "morphing observables", this, kTRUE, kFALSE),
@@ -2057,9 +2053,34 @@ RooLagrangianMorphFunc::RooLagrangianMorphFunc(const char *name,
       _observables("observables", "morphing observables", this, kTRUE, kFALSE),
       _binWidths("binWidths", "set of binWidth objects", this, kTRUE, kFALSE),
       _curNormSet(0) {
-  this->_config.couplings = couplings;
+  this->_config.setCouplings(couplings);
   this->_config.observableName = observableName;
   this->_config.fileName = inputFile;
+  for (const auto &folder :folders) this->_config.folderNames.push_back(folder->GetName());
+  this->init();
+  this->setup(false);
+
+  TRACE_CREATE
+}
+
+////////////////////////////////////////////////////////////////////////////////
+/// constructor with proper arguments
+
+RooLagrangianMorphFunc::RooLagrangianMorphFunc(const char *name,
+                                               const char *title,
+                                               const char *inputFile, 
+                                               const char *observableName,
+                                               const RooArgList &folders,
+                                               const RooArgList &prodCouplings,
+                                               const RooArgList &decCouplings)
+      : RooAbsReal(name, title), _cacheMgr(this, 10, kTRUE, kTRUE),
+      _operators("operators", "set of operators", this, kTRUE, kFALSE),
+      _observables("observables", "morphing observables", this, kTRUE, kFALSE),
+      _binWidths("binWidths", "set of binWidth objects", this, kTRUE, kFALSE),
+      _curNormSet(0) {
+  this->_config.setCouplings(prodCouplings,decCouplings);
+  this->_config.observableName = observableName;
+  this->_config.fileName       = inputFile;
   for (const auto &folder :folders) this->_config.folderNames.push_back(folder->GetName());
   this->init();
   this->setup(false);
@@ -2172,6 +2193,12 @@ void RooLagrangianMorphFunc::setup(bool own) {
 
 void RooLagrangianMorphFunc::init() {
   std::string filename = this->_config.fileName;
+  if(this->_config.folderNames.size()==0) {
+    for(const auto& folder : this->_config.folders){
+      this->_config.folderNames.push_back(folder->GetName());
+    }
+  }
+
   TDirectory *file = openFile(filename.c_str());
   if (!file) {
     coutE(InputArguments) << "unable to open file '" << filename << "'!"
@@ -2179,6 +2206,7 @@ void RooLagrangianMorphFunc::init() {
     return;
   }
   this->readParameters(file);
+
   checkNameConflict(this->_config.paramCards, this->_operators);
   this->collectInputs(file);
   closeFile(file);
@@ -3272,7 +3300,7 @@ TMatrixD RooLagrangianMorphFunc::getMatrix() const {
   auto cache = getCache(_curNormSet);
   if (!cache)
     coutE(Caching) << "unable to retrieve cache!" << std::endl;
-  return makeRootMatrix(cache->_matrix);
+  return makeTMatrix(cache->_matrix);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -3282,7 +3310,7 @@ TMatrixD RooLagrangianMorphFunc::getInvertedMatrix() const {
   auto cache = getCache(_curNormSet);
   if (!cache)
     coutE(Caching) << "unable to retrieve cache!" << std::endl;
-  return makeRootMatrix(cache->_inverse);
+  return makeTMatrix(cache->_inverse);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

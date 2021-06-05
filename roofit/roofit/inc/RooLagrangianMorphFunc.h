@@ -62,6 +62,7 @@
 #include "RooSetProxy.h"
 #include "RooWrapperPdf.h"
 #include "TMatrixD.h"
+#include <boost/multiprecision/cpp_dec_float.hpp>
 
 class RooWorkspace;
 class RooParamHistFunc;
@@ -88,28 +89,47 @@ public:
 
     std::string observableName;
     std::string fileName;
-    ParamMap paramCards;
-    FlagMap flagValues;
     std::vector<std::string> folderNames;
     RooArgList couplings;
     RooArgList decCouplings;
     RooArgList prodCouplings;
     RooArgList folders;
+
+    ParamMap paramCards;
+    FlagMap flagValues;
     std::vector<RooArgList *> vertices;
     std::vector<RooArgList *> nonInterfering;
     bool allowNegativeYields=true;
+
+    void setCouplings(const RooArgList &inProdCouplings, const RooArgList &inDecCouplings)
+    { 
+      prodCouplings.add(inProdCouplings);
+      decCouplings.add(inDecCouplings);
+    }
+
+    void setCouplings(const RooArgList &inCouplings)
+    { 
+      couplings.add(inCouplings);
+    }
    
   };
 
   void readParameters(TDirectory *f);
   RooLagrangianMorphFunc();
   RooLagrangianMorphFunc(const char *name, const char *title,
-                         const Config &config);
+                         const Config config);
   RooLagrangianMorphFunc(const char *name, const char *title,
                          const char* inputFile, 
                          const char* observableName,
                          const RooArgList &folders,
                          const RooArgList &couplings);  
+  RooLagrangianMorphFunc(const char *name, const char *title,
+                         const char* inputFile, 
+                         const char* observableName,
+                         const RooArgList &folders,
+                         const RooArgList &prodCouplings,
+                         const RooArgList &decCouplings);  
+
   RooLagrangianMorphFunc(const RooLagrangianMorphFunc &other,
                          const char *newName);
 
@@ -219,6 +239,9 @@ protected:
 
 public:
   /// length of floating point digits precision supported by implementation.
+  typedef boost::multiprecision::number<boost::multiprecision::cpp_dec_float<100> > SuperFloat;
+  typedef std::numeric_limits< SuperFloat > SuperFloatPrecision;
+
   static constexpr double implementedPrecision = SuperFloatPrecision::digits10;
   void importToWorkspace(RooWorkspace *ws, const RooAbsReal *object);
   void importToWorkspace(RooWorkspace *ws, RooAbsData *object);
@@ -280,6 +303,7 @@ public:
 
   RooAbsPdf::ExtendMode extendMode() const;
   Double_t expectedEvents(const RooArgSet *nset) const;
+  Double_t expectedEvents(const RooArgSet &nset) const;
   Double_t expectedEvents() const;
   Bool_t selfNormalized() const { return true; }
 
