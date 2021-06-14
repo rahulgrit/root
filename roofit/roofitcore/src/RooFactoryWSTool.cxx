@@ -93,6 +93,7 @@ static Int_t init()
   RooFactoryWSTool::registerSpecial("EXPR",iface) ;
   RooFactoryWSTool::registerSpecial("FCONV",iface) ;
   RooFactoryWSTool::registerSpecial("NCONV",iface) ;
+  RooFactoryWSTool::registerSpecial("Config",iface) ;
 
   // Operator functions
   RooFactoryWSTool::registerSpecial("sum",iface) ;
@@ -1949,8 +1950,6 @@ std::map<std::string,RooFactoryWSTool::IFace*>& RooFactoryWSTool::hooks()
   _hooks = new map<string,IFace*> ;
   return *_hooks ;
 }
-
-
 
 ////////////////////////////////////////////////////////////////////////////////
 /// Concatenate list of args into comma separated string

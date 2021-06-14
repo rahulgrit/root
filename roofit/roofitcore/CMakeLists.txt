@@ -131,6 +131,7 @@ ROOT_STANDARD_LIBRARY_PACKAGE(RooFitCore
     RooLinTransBinning.h
     RooList.h
     RooListProxy.h
+    RooLMWSTool.h
     RooMappedCategory.h
     RooMath.h
     RooMCIntegrator.h
@@ -209,6 +210,7 @@ ROOT_STANDARD_LIBRARY_PACKAGE(RooFitCore
     RooStudyPackage.h
     RooSuperCategory.h
     RooTable.h
+    RooTaylorExpansion.h
     RooTFoamBinding.h
     RooThresholdCategory.h
     RooTObjWrap.h
@@ -348,6 +350,7 @@ ROOT_STANDARD_LIBRARY_PACKAGE(RooFitCore
     src/RooLinTransBinning.cxx
     src/RooList.cxx
     src/RooListProxy.cxx
+    src/RooLMWSTool.cxx
     src/RooMappedCategory.cxx
     src/RooMath.cxx
     src/RooMCIntegrator.cxx
@@ -424,6 +427,7 @@ ROOT_STANDARD_LIBRARY_PACKAGE(RooFitCore
     src/RooStudyPackage.cxx
     src/RooSuperCategory.cxx
     src/RooTable.cxx
+    src/RooTaylorExpansion.cxx
     src/RooTFoamBinding.cxx
     src/RooThresholdCategory.cxx
     src/RooTObjWrap.cxx

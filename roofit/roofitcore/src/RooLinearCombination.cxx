@@ -29,6 +29,7 @@ ClassImp(RooLinearCombination);
 namespace {
   template <class T> inline void assign(SuperFloat &var, const T &val) {
   #ifdef USE_UBLAS
+    //var = val;
     var.assign(val);
   #else
     var = val;
@@ -112,9 +113,11 @@ Double_t RooLinearCombination::evaluate() const {
   const std::size_t n(this->_actualVars.getSize());
   for (std::size_t i = 0; i < n; ++i) {
     SuperFloat tmp;
+    //tmp =static_cast<const RooAbsReal *>(this->_actualVars.at(i))->getVal();
     tmp.assign(static_cast<const RooAbsReal *>(this->_actualVars.at(i))->getVal());
     result += this->_coefficients[i] * tmp;
   }
+  //return result;
   return result.convert_to<double>();
 #else    
   const std::size_t n(this->_actualVars.getSize());    

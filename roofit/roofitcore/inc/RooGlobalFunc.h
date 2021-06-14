@@ -41,6 +41,7 @@ class RooAbsCategory ;
 class RooNumIntConfig ;
 class RooArgList ;
 class RooAbsCollection ;
+class RooLagrangianMorphFunc ;
 class TH1 ;
 class TTree ;
 
@@ -158,6 +159,14 @@ RooCmdArg StoreError(RooArgSet && aset) ;
 RooCmdArg StoreAsymError(const RooArgSet& aset) ;
 RooCmdArg StoreAsymError(RooArgSet && aset) ;
 RooCmdArg OwnLinked() ;
+
+// RooLagrangianMorphFunc::ctor arguments
+RooCmdArg FileName(const char* filename) ;
+RooCmdArg ObservableName(const char *obsname);
+RooCmdArg Folders(const RooArgList& folders);
+RooCmdArg Couplings(const RooArgList& couplings);
+RooCmdArg Couplings(const RooArgList& prodCouplings, const RooArgList& decCouplings);
+RooCmdArg AllowNegativeYields(bool allowNegativeYields=kTRUE) ; 
 
 /** @} */
 
