@@ -9,14 +9,17 @@
 #ifndef ROO_LAGRANGIAN_MORPH_FLOAT
 #define ROO_LAGRANGIAN_MORPH_FLOAT
 
+// uncomment to force UBLAS multiprecision matrices
+#define USE_UBLAS 1
+//#undef USE_UBLAS
+
 #ifdef USE_UBLAS
 #include <boost/multiprecision/cpp_dec_float.hpp>
 #endif
 
 #include <limits>
 #ifdef USE_UBLAS
-typedef boost::multiprecision::number<boost::multiprecision::cpp_dec_float<100>>
-    SuperFloat;
+typedef boost::multiprecision::number<boost::multiprecision::cpp_dec_float<100>,boost::multiprecision::et_off> SuperFloat;
 typedef std::numeric_limits<SuperFloat> SuperFloatPrecision;
 #else
 typedef double SuperFloat;

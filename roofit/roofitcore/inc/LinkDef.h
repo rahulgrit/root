@@ -137,6 +137,7 @@
 #pragma link C++ class RooLinTransBinning+ ;
 #pragma link C++ class RooList+ ;
 #pragma link C++ class RooListProxy+ ;
+#pragma link C++ class RooLMWSTool+ ;
 #pragma link C++ class RooMappedCategory+ ;
 #pragma read sourceClass="RooMappedCategory" targetClass="RooMappedCategory" version="[1]" include="RooFitLegacy/RooCatTypeLegacy.h" source="RooCatType* _defCat" target="_defCat" code="{ _defCat = onfile._defCat->getVal(); }"
 #pragma link C++ class RooMappedCategory::Entry+;
@@ -220,6 +221,7 @@
   code="{auto newArg = new RooMultiCategory((std::string(newObj->GetName()) + \"_internalMultiCat\").c_str(), newObj->GetTitle(), onfile._catSet); \
          _multiCat.setArg(*newArg); }";
 #pragma link C++ class RooTable+ ;
+#pragma link C++ class RooTaylorExpansion+ ;
 #pragma link C++ class RooThresholdCategory+ ;
 #pragma read sourceClass="RooThresholdCategory" targetClass="RooThresholdCategory" version="[1]" \
   include="TSortedList.h" \

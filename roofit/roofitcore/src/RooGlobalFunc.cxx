@@ -161,7 +161,18 @@ namespace RooFit {
     container.setProcessRecArgs(kTRUE,kFALSE) ;
     return container ;
   }
+
  
+  // RooLagrangianMorphFunc::ctor arguments
+  RooCmdArg FileName(const char* fileName) { return RooCmdArg("FileName",0,0,0,0,fileName,0,0,0) ; }
+  RooCmdArg ObservableName(const char *obsName) { return RooCmdArg("ObservableName",0,0,0,0,obsName,0,0,0) ; }
+  RooCmdArg Folders(const RooArgList& folders) { return RooCmdArg("Folders",0,0,0,0,0,0,&folders,0) ; }
+  RooCmdArg Couplings(const RooArgList& couplings) {
+    return RooCmdArg("Couplings",0,0,0,0,0,0,&couplings,0) ;
+  }
+  RooCmdArg Couplings(const RooArgList& prodCouplings, const RooArgList& decCouplings) {
+    return RooCmdArg("Couplings",0,0,0,0,0,0,&prodCouplings,&decCouplings) ;
+  }
 
   // RooChi2Var::ctor / RooNLLVar arguments
   RooCmdArg Extended(Bool_t flag) { return RooCmdArg("Extended",flag,0,0,0,0,0,0,0) ; }
@@ -182,7 +193,8 @@ namespace RooFit {
             ret.addArg(arg3) ; ret.addArg(arg4) ; ret.addArg(arg5) ; ret.addArg(arg6) ; ret.addArg(arg7) ; ret.addArg(arg8) ;
             ret.setProcessRecArgs(kFALSE) ; return ret ;
   }
-  
+
+
   // RooAbsRealLValue::frame arguments
   RooCmdArg Title(const char* name) { return RooCmdArg("Title",0,0,0,0,name,0,0,0) ; }
   RooCmdArg Bins(Int_t nbin)        { return RooCmdArg("Bins",nbin,0,0,0,0,0,0,0) ; }

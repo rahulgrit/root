@@ -98,7 +98,16 @@ public:
     std::vector<RooArgList *> vertices;
     std::vector<RooArgList *> nonInterfering;
     bool allowNegativeYields=true;
-   
+    
+    void setCouplings(const RooArgList &inCouplings) {
+       couplings.add(inCouplings);
+    }
+
+    void setCouplings(const RooArgList &inProdCouplings, const RooArgList &inDecCouplings) {
+       decCouplings.add(inDecCouplings);
+       prodCouplings.add(inProdCouplings);
+    }
+     
   };
 
   void readParameters(TDirectory *f);
@@ -110,6 +119,19 @@ public:
                          const char* observableName,
                          const RooArgList &folders,
                          const RooArgList &couplings);  
+  RooLagrangianMorphFunc(const char *name, const char *title,
+                         const char* inputFile, 
+                         const char* observableName,
+                         const RooArgList &folders,
+                         const RooArgList &prodCouplings,
+			 const RooArgList &decCouplings);  
+  RooLagrangianMorphFunc(const char *name, const char *title,
+                         const RooCmdArg& arg1=RooCmdArg::none(), const RooCmdArg& arg2=RooCmdArg::none(),
+                         const RooCmdArg& arg3=RooCmdArg::none(), const RooCmdArg& arg4=RooCmdArg::none(),
+                         const RooCmdArg& arg5=RooCmdArg::none(), const RooCmdArg& arg6=RooCmdArg::none(),
+                         const RooCmdArg& arg7=RooCmdArg::none(), const RooCmdArg& arg8=RooCmdArg::none());
+  
+
   RooLagrangianMorphFunc(const RooLagrangianMorphFunc &other,
                          const char *newName);
 
@@ -280,6 +302,7 @@ public:
 
   RooAbsPdf::ExtendMode extendMode() const;
   Double_t expectedEvents(const RooArgSet *nset) const;
+  Double_t expectedEvents(const RooArgSet &nset) const;
   Double_t expectedEvents() const;
   Bool_t selfNormalized() const { return true; }
 

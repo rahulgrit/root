@@ -59,6 +59,7 @@ describe the same process or not.
 #include "TRandom3.h" 
 // stl includes
 #include "ROOT/RMakeUnique.hxx"
+#include "RooCmdConfig.h"
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
@@ -148,6 +149,7 @@ inline void writeMatrixToFileT(const MatrixT &matrix, const char *fname) {
 #pragma GCC diagnostic ignored "-Wshadow"
 #pragma GCC diagnostic ignored "-Wunused-local-typedefs"
 #include <boost/numeric/ublas/io.hpp>
+#include <boost/numeric/ublas/vector.hpp>
 #include <boost/numeric/ublas/lu.hpp>
 #include <boost/numeric/ublas/matrix.hpp>
 #include <boost/numeric/ublas/matrix_expression.hpp>
@@ -156,6 +158,7 @@ inline void writeMatrixToFileT(const MatrixT &matrix, const char *fname) {
 #include <boost/operators.hpp>
 
 #pragma GCC diagnostic pop
+using boost::numeric::ublas::prod;
 
 typedef boost::numeric::ublas::matrix<SuperFloat> Matrix;
 
@@ -165,8 +168,7 @@ typedef boost::numeric::ublas::matrix<SuperFloat> Matrix;
 inline void printMatrix(const Matrix &mat) {
   for (size_t i = 0; i < mat.size1(); ++i) {
     for (size_t j = 0; j < mat.size2(); ++j) {
-      // std::cout << std::setprecision(SuperFloatPrecision::digits10) <<
-      // mat(i,j) << " ,\t";
+      std::cout << mat(i,j) << " ,\t";
     }
     std::cout << std::endl;
   }
@@ -176,7 +178,7 @@ inline void printMatrix(const Matrix &mat) {
 /// retrieve the size of a square matrix
 
 template <> inline size_t size<Matrix>(const Matrix &matrix) {
-  return matrix.size();
+  return matrix.size1();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -214,12 +216,12 @@ inline Matrix makeSuperMatrix(const TMatrixD &in) {
   return mat;
 }
 
-inline Matrix operator+=(const Matrix &rhs) { return add(rhs); }
+//inline Matrix operator+=(const Matrix &rhs) { return add(rhs); }
 inline Matrix operator*(const Matrix &m, const Matrix &otherM) {
   return prod(m, otherM);
 }
 
-////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
 /// calculate the inverse of a matrix, returning the condition
 
 inline SuperFloat invertMatrix(const Matrix &matrix, Matrix &inverse) {
@@ -231,7 +233,7 @@ inline SuperFloat invertMatrix(const Matrix &matrix, Matrix &inverse) {
     if (res != 0) {
       std::stringstream ss;
       ::writeMatrixToStreamT(matrix, ss);
-      cxcoutP(Eval) << ss.str << std::endl;
+      //cxcoutP(Eval) << ss.str << std::endl;
     }
     // backsubstitute to get the inverse
     lu_substitute(lu, pm, inverse);
@@ -241,6 +243,11 @@ inline SuperFloat invertMatrix(const Matrix &matrix, Matrix &inverse) {
   }
   SuperFloat inorm = norm_inf(inverse);
   SuperFloat condition = mnorm * inorm;
+  std::cout << "condition & norm" << condition << " " << inorm << std::endl;
+  Matrix calc = prod(matrix,inverse);
+  printMatrix(matrix);
+  printMatrix(inverse);
+  printMatrix(calc);
   return condition;
 }
 
@@ -292,6 +299,7 @@ inline double invertMatrix(const Matrix &matrix, Matrix &inverse) {
     for (size_t j = 0; j < n; ++j)
       if (fabs(inverse(i, j)) < 1e-9)
         inverse(i, j) = 0;
+  printMatrix(inverse);
   return condition;
 }
 #endif
@@ -1077,11 +1085,11 @@ inline void checkMatrix(const RooLagrangianMorphFunc::ParamMap &inputParameters,
 
 ////////////////////////////////////////////////////////////////////////////////
 /// check if the entries in the inverted matrix are sensible
-
+/*
 inline void inverseSanity(const Matrix &matrix, const Matrix &inverse,
                           double &unityDeviation, double &largestWeight) {
   // cxcoutP(Eval) << "multiplying for sanity check" << std::endl;
-  Matrix unity(inverse * matrix);
+  Matrix unity = prod(inverse,matrix);
 
   unityDeviation = 0.;
   largestWeight = 0.;
@@ -1099,7 +1107,7 @@ inline void inverseSanity(const Matrix &matrix, const Matrix &inverse,
   // std::cout << "found deviation of " << unityDeviation << ", largest weight
   // is " << largestWeight << "." << std::endl;
 }
-
+*/
 ////////////////////////////////////////////////////////////////////////////////
 /// check for name conflicts between the input samples and an argument set
 template <class List>
@@ -1477,7 +1485,7 @@ public:
     // coutD(Eval) << "Condition of the matrix :" << condition << std::endl;
 
     double unityDeviation, largestWeight;
-    inverseSanity(matrix, inverse, unityDeviation, largestWeight);
+    //inverseSanity(matrix, inverse, unityDeviation, largestWeight);
     bool weightwarning(largestWeight > morphLargestWeight ? true : false);
     bool unitywarning(unityDeviation > morphUnityDeviation ? true : false);
 
@@ -2057,7 +2065,7 @@ RooLagrangianMorphFunc::RooLagrangianMorphFunc(const char *name,
       _observables("observables", "morphing observables", this, kTRUE, kFALSE),
       _binWidths("binWidths", "set of binWidth objects", this, kTRUE, kFALSE),
       _curNormSet(0) {
-  this->_config.couplings = couplings;
+  this->_config.couplings.add(couplings);
   this->_config.observableName = observableName;
   this->_config.fileName = inputFile;
   for (const auto &folder :folders) this->_config.folderNames.push_back(folder->GetName());
@@ -2066,6 +2074,96 @@ RooLagrangianMorphFunc::RooLagrangianMorphFunc(const char *name,
 
   TRACE_CREATE
 }
+
+////////////////////////////////////////////////////////////////////////////////
+/// constructor with proper arguments
+
+RooLagrangianMorphFunc::RooLagrangianMorphFunc(const char *name,
+                                               const char *title,
+                                               const char *inputFile, 
+                                               const char *observableName,
+                                               const RooArgList &folders,
+                                               const RooArgList &prodCouplings,
+                                               const RooArgList &decCouplings)
+      : RooAbsReal(name, title), _cacheMgr(this, 10, kTRUE, kTRUE),
+      _operators("operators", "set of operators", this, kTRUE, kFALSE),
+      _observables("observables", "morphing observables", this, kTRUE, kFALSE),
+      _binWidths("binWidths", "set of binWidth objects", this, kTRUE, kFALSE),
+      _curNormSet(0) {
+  this->_config.prodCouplings.add(prodCouplings);
+  this->_config.decCouplings.add(decCouplings);
+  this->_config.observableName = observableName;
+  this->_config.fileName = inputFile;
+  for (const auto &folder :folders) this->_config.folderNames.push_back(folder->GetName());
+  this->init();
+  this->setup(false);
+
+  TRACE_CREATE
+}
+
+
+RooLagrangianMorphFunc::RooLagrangianMorphFunc(const char *name, 
+					       const char *title,
+                 const RooCmdArg& arg1, const RooCmdArg& arg2,
+                 const RooCmdArg& arg3, const RooCmdArg& arg4,
+                 const RooCmdArg& arg5, const RooCmdArg& arg6,
+                 const RooCmdArg& arg7, const RooCmdArg& arg8) :
+      RooAbsReal(name, title), _cacheMgr(this, 10, kTRUE, kTRUE),
+      _operators("operators", "set of operators", this, kTRUE, kFALSE),
+      _observables("observables", "morphing observables", this, kTRUE, kFALSE),
+      _binWidths("binWidths", "set of binWidth objects", this, kTRUE, kFALSE),
+      _curNormSet(0) 
+//  RooLagrangianMorphFunc::RooLagrangianMorphFunc(name, title, (Config*)RooCmdConfig::decodeObjOnTheFly("RooLagrangianMorphFunc::RooLagrangianMorphFunc", "Config",0,0,arg1,arg2,arg3,arg4,arg5,arg6,arg7,arg8))
+{
+
+   RooLinkedList l ;
+   l.Add((TObject*)&arg1) ;  l.Add((TObject*)&arg2) ;  
+   l.Add((TObject*)&arg3) ;  l.Add((TObject*)&arg4) ;
+   l.Add((TObject*)&arg5) ;  l.Add((TObject*)&arg6) ;  
+   l.Add((TObject*)&arg7) ;  l.Add((TObject*)&arg8) ;
+
+   // Process & check varargs 
+
+   RooCmdConfig pc(Form("RooLagrangianMorphFunc(%s)",name)) ;
+   pc.defineString("fileName","FileName",0,"") ;
+   pc.defineString("observableName","ObservableName",0, "") ;
+   pc.defineObject("folders","Folders",0,0) ;
+   pc.defineInt("allowNegativeYields","NegativeYields",0,1) ;
+   pc.defineObject("prodCouplings","ProdCouplings",0,0) ;
+   pc.defineObject("decCouplings","decCouplings",0,0) ;
+   pc.defineObject("couplings","Couplings",0,0) ;
+   pc.allowUndefined() ;
+
+   pc.process(l) ;
+   if (pc.ok(kTRUE)) {
+
+   RooLagrangianMorphFunc::Config config;
+   config.fileName = pc.getString("fileName");
+   config.observableName = pc.getString("observableName");
+
+   if (pc.getObject("folders")!=nullptr) {
+     config.folders.add(*(static_cast<RooArgList*>(pc.getObject("folders"))));
+    for (const auto &folder :config.folders) config.folderNames.push_back(folder->GetName());}
+ 
+
+   if (pc.getObject("couplings")!=nullptr) 
+   //std::cout << pc.getObject("couplings")->size() << std::endl;
+   config.couplings.add(*(static_cast<RooArgList*>(pc.getObject("couplings")))) ;
+   std::cout << "Hello" << std::endl;
+
+  // config.prodCouplings.add(static_cast<RooArgList*>(pc.getObject("prodCouplings")));
+  // config.decCouplings.add(static_cast<RooArgList*>(pc.getObject("decCouplings")));
+//   config.couplings.add((RooArgList*) pc.getObject("couplings"));
+   std::cout << "Hello" << std::endl;
+
+   this->_config = config;
+   this->init();
+   this->setup(false);
+
+   }
+
+}
+
 
 /*////////////////////////////////////////////////////////////////////////////////
 /// protected constructor with proper arguments
